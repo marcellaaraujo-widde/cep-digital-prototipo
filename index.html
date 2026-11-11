@@ -1,0 +1,564 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CEP Digital Missão Endereço</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;700&display=swap">
+<style>
+/* Layout: HUD fixo com XP, hero + passaporte de missões, 4 missões em sequência (jogo, quiz, calculadora, cadastro), prova e FAQ. */
+:root{
+  --bg:#f3f6f6; --surface:#ffffff; --fg:#122428; --muted:#4b6268; --line:#d5e0e2;
+  --brand:#0b5c6b; --brand-fg:#ffffff; --brand-soft:#e1f0f2; --accent:#f2b01e; --accent-fg:#241a00;
+  --good:#1f7a4d; --bad:#b3261e; --warn-bg:#fff4d6; --warn-fg:#5a4300;
+  --display:"Space Grotesk","Segoe UI",system-ui,sans-serif; --body:"Inter","Segoe UI",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0d191c; --surface:#142428; --fg:#e8f1f2; --muted:#9fb5ba; --line:#274147;
+  --brand:#4fb3c4; --brand-fg:#06242a; --brand-soft:#173a41; --accent:#f2b01e; --accent-fg:#241a00;
+  --good:#5fd194; --bad:#ff8a80; --warn-bg:#3a2f0e; --warn-fg:#f7e2a6; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0d191c; --surface:#142428; --fg:#e8f1f2; --muted:#9fb5ba; --line:#274147;
+  --brand:#4fb3c4; --brand-fg:#06242a; --brand-soft:#173a41; --accent:#f2b01e; --accent-fg:#241a00;
+  --good:#5fd194; --bad:#ff8a80; --warn-bg:#3a2f0e; --warn-fg:#f7e2a6; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:16px;line-height:1.55;margin:0}
+.wrap{max-width:1080px;margin-inline:auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1,h2,h3{font-family:var(--display);line-height:1.12;text-wrap:balance;margin:0}
+h1{font-size:clamp(2rem,5vw,3.1rem);letter-spacing:-.02em}
+h2{font-size:clamp(1.5rem,3.2vw,2rem);letter-spacing:-.01em}
+h3{font-size:1.1rem}
+p{margin:0}
+a{color:var(--brand)}
+:focus-visible{outline:3px solid var(--brand);outline-offset:2px}
+.notice{background:var(--warn-bg);color:var(--warn-fg);font-size:.86rem;padding-block:9px}
+.notice .wrap{display:flex;gap:10px;align-items:baseline}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font:600 1rem var(--body);border:0;border-radius:10px;padding:13px 22px;cursor:pointer;text-decoration:none;min-height:48px}
+.btn.primary{background:var(--accent);color:var(--accent-fg)}
+.btn.primary:hover{filter:brightness(.94)}
+.btn.ghost{background:transparent;color:var(--brand);border:2px solid var(--brand)}
+.btn.small{padding:9px 14px;min-height:40px;font-size:.9rem}
+/* HUD */
+.hud{position:sticky;top:env(safe-area-inset-top,0px);z-index:30;background:var(--surface);border-bottom:1px solid var(--line)}
+.hud .wrap{display:flex;align-items:center;gap:16px;padding-block:10px}
+.logo{font:700 1.15rem var(--display);color:var(--brand);letter-spacing:-.02em;white-space:nowrap}
+.xp{flex:1;min-width:0}
+.xp-top{display:flex;justify-content:space-between;gap:8px;font-size:.8rem;color:var(--muted);margin-bottom:4px}
+.xp-top b{color:var(--fg)}
+.bar{height:10px;border-radius:99px;background:var(--line);overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--brand),var(--accent));border-radius:99px;transition:width .5s ease}
+.medals{display:flex;gap:6px}
+.medal{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:var(--line);color:var(--muted);transition:all .3s}
+.medal svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.medal.on{background:var(--accent);color:var(--accent-fg);transform:scale(1.08)}
+.toast{position:fixed;left:50%;transform:translate(-50%,-20px);top:calc(70px + env(safe-area-inset-top,0px));background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:99px;font-weight:600;font-size:.92rem;opacity:0;pointer-events:none;z-index:50;transition:all .3s;max-width:calc(100vw - 32px);text-align:center}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+/* hero */
+.hero{padding-block:44px 52px}
+.hero .wrap{display:grid;grid-template-columns:1.1fr .9fr;gap:36px;align-items:start}
+.eyebrow{font:600 .8rem var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--brand);margin-bottom:12px}
+.lead{font-size:1.12rem;color:var(--muted);margin-top:16px;max-width:34em}
+.ctas{display:flex;flex-wrap:wrap;gap:12px;margin-top:24px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:22px}
+.pass h3{margin-bottom:4px}
+.pass .sub2{color:var(--muted);font-size:.9rem;margin-bottom:14px}
+.missions{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.missions li{display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid var(--line);border-radius:10px}
+.missions .ck{width:24px;height:24px;border-radius:50%;border:2px solid var(--line);flex:none;display:grid;place-items:center}
+.missions li.done .ck{background:var(--good);border-color:var(--good);color:#fff}
+.missions .ck svg{width:14px;height:14px;stroke:#fff;fill:none;stroke-width:3;opacity:0}
+.missions li.done .ck svg{opacity:1}
+.missions a{flex:1;color:var(--fg);text-decoration:none;font-weight:600;font-size:.95rem}
+.missions .pts{font-size:.8rem;font-weight:600;color:var(--brand);white-space:nowrap}
+section.block{padding-block:52px;border-top:1px solid var(--line)}
+section.alt{background:var(--surface)}
+.mhead{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 14px;margin-bottom:8px}
+.tag{font:600 .75rem var(--body);letter-spacing:.06em;text-transform:uppercase;background:var(--brand-soft);color:var(--brand);padding:4px 10px;border-radius:99px}
+.sub{color:var(--muted);max-width:42em;margin-bottom:24px}
+/* game */
+.game{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,320px);gap:24px;align-items:start}
+.map{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.cell{position:relative;border:2px solid var(--line);background:var(--bg);border-radius:10px;padding:10px 6px;min-height:78px;cursor:pointer;font:500 .78rem/1.2 var(--body);color:var(--fg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;text-align:center}
+.cell:hover{border-color:var(--brand)}
+.house{width:30px;height:24px;position:relative;border-radius:3px 3px 2px 2px}
+.house::before{content:"";position:absolute;left:-3px;right:-3px;top:-9px;height:10px;background:inherit;filter:brightness(.8);clip-path:polygon(50% 0,100% 100%,0 100%)}
+.c-azul{background:#3b82c4}.c-verde{background:#3d9a5b}.c-amarela{background:#e0b020}.c-rosa{background:#d9648e}
+.cell.gps::after{content:"GPS";position:absolute;top:3px;right:3px;font:700 .6rem var(--body);background:var(--bad);color:#fff;padding:1px 5px;border-radius:4px}
+.cell.right{border-color:var(--good);background:color-mix(in srgb,var(--good) 18%,var(--surface))}
+.cell.wrong{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 15%,var(--surface))}
+.clue{background:var(--brand-soft);border-radius:12px;padding:16px}
+.clue .k{font:600 .75rem var(--body);text-transform:uppercase;letter-spacing:.06em;color:var(--brand)}
+.clue p.q{font:600 1.15rem var(--display);margin:6px 0 10px}
+.stars{display:flex;gap:6px;margin:10px 0}
+.stars svg{width:26px;height:26px;stroke:var(--line);fill:none;stroke-width:2;stroke-linejoin:round}
+.stars svg.on{fill:var(--accent);stroke:var(--accent)}
+.fb{min-height:2.6em;font-size:.92rem;margin-top:6px}
+.fb.ok{color:var(--good)} .fb.no{color:var(--bad)}
+/* quiz */
+.quiz{max-width:720px}
+.opts{display:grid;gap:10px;margin-top:14px}
+.opt{text-align:left;font:500 1rem var(--body);color:var(--fg);background:var(--surface);border:2px solid var(--line);border-radius:10px;padding:13px 14px;cursor:pointer}
+.opt:hover:not(:disabled){border-color:var(--brand)}
+.opt.right{border-color:var(--good);background:color-mix(in srgb,var(--good) 15%,var(--surface))}
+.opt.wrong{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 13%,var(--surface))}
+.qn{font-size:.85rem;color:var(--muted);margin-bottom:6px}
+.expl{margin-top:12px;color:var(--muted);font-size:.94rem;min-height:1.2em}
+/* calc */
+.calc{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px;align-items:center;max-width:860px}
+label{display:block;font-weight:600;font-size:.92rem;margin:14px 0 6px}
+.hint{font-weight:400;color:var(--muted)}
+input[type=text],input[type=tel],input[type=number],textarea{width:100%;font:1rem var(--body);color:var(--fg);background:var(--bg);border:1.5px solid var(--line);border-radius:9px;padding:12px}
+textarea{min-height:80px;resize:vertical}
+input[type=range]{width:100%;accent-color:var(--brand)}
+.result{background:var(--brand);color:var(--brand-fg);border-radius:14px;padding:22px;text-align:center}
+.result .n{font:700 clamp(2rem,6vw,3rem) var(--display);color:var(--accent);line-height:1.1}
+.result small{display:block;margin-top:8px;opacity:.9;font-size:.82rem}
+/* form */
+.formwrap{max-width:560px}
+.steps-bar{display:flex;gap:6px;margin-bottom:6px}
+.steps-bar i{flex:1;height:6px;border-radius:3px;background:var(--line)}
+.steps-bar i.on{background:var(--brand)}
+.step-label{font-size:.85rem;color:var(--muted);margin-bottom:12px}
+.err{color:var(--bad);font-size:.85rem;margin-top:4px;min-height:1.1em}
+.row{display:flex;gap:10px;margin-top:20px}.row .btn{flex:1}
+.check{display:flex;gap:10px;align-items:flex-start;font-weight:400;font-size:.9rem;margin-top:16px}
+.check input{margin-top:4px;width:18px;height:18px;flex:none}
+.passport{border:2px dashed var(--brand);border-radius:14px;padding:20px;background:var(--brand-soft)}
+.passport .code{font:700 1.6rem var(--display);letter-spacing:.04em;color:var(--brand);margin:6px 0}
+.passport dl{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;margin:12px 0 0;font-size:.92rem}
+.passport dt{color:var(--muted)} .passport dd{margin:0;font-weight:600}
+.level-line{margin-top:14px;font-weight:600}
+/* misc */
+.grid{display:grid;gap:16px}
+.g4{grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(250px,1fr))}
+.benefit h3{margin-bottom:6px}.benefit p{color:var(--muted);font-size:.95rem}
+.ico{width:40px;height:40px;border-radius:10px;background:var(--brand-soft);color:var(--brand);display:grid;place-items:center;margin-bottom:12px}
+.ico svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.problem{background:var(--brand);color:var(--brand-fg)}
+.problem .wrap{display:grid;grid-template-columns:auto 1fr;gap:28px;align-items:center;padding-block:40px}
+.problem .big{font:700 clamp(2.8rem,8vw,5rem) var(--display);line-height:1;letter-spacing:-.03em;color:var(--accent)}
+.problem small{display:block;margin-top:8px;opacity:.88;font-size:.82rem}
+ol.how{list-style:none;padding:0;margin:0;display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));counter-reset:s}
+ol.how li{counter-increment:s}
+ol.how li::before{content:counter(s);display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:var(--accent);color:var(--accent-fg);font:700 1rem var(--display);margin-bottom:10px}
+.ph{border:2px dashed var(--line);border-radius:12px;padding:20px;color:var(--muted);font-size:.92rem}
+details{border:1px solid var(--line);background:var(--bg);border-radius:12px}
+details+details{margin-top:10px}
+summary{cursor:pointer;font-weight:600;padding:15px 18px;list-style:none;display:flex;justify-content:space-between;gap:12px}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"+";font-size:1.3rem;line-height:1;color:var(--brand)}
+details[open] summary::after{content:"–"}
+details p{padding:0 18px 16px;color:var(--muted)}
+footer{padding-block:26px;font-size:.88rem;color:var(--muted);border-top:1px solid var(--line)}
+footer .wrap{display:flex;flex-wrap:wrap;gap:8px 24px;justify-content:space-between}
+canvas#fx{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:60}
+.bot{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(72px + env(safe-area-inset-bottom,0px));z-index:40;width:min(330px,calc(100vw - 32px));max-height:65vh;overflow:auto;box-shadow:0 12px 40px rgba(0,0,0,.25)}
+.bot-fab{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:40}
+.msg{background:var(--brand-soft);border-radius:12px;padding:9px 12px;font-size:.92rem;margin-bottom:8px}
+.msg.me{background:var(--accent);color:var(--accent-fg);margin-left:26px}
+.qr{display:flex;flex-wrap:wrap;gap:8px}
+.qr button{font:500 .85rem var(--body);background:var(--surface);color:var(--brand);border:1.5px solid var(--brand);border-radius:99px;padding:7px 12px;cursor:pointer}
+@media (max-width:820px){
+  .hero .wrap,.game,.calc{grid-template-columns:1fr}
+  .problem .wrap{grid-template-columns:1fr;gap:10px}
+  .notice .wrap{flex-direction:column;gap:2px}
+  .medals{display:none}
+  .logo{font-size:1rem}
+}
+@media (prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}
+@media (prefers-reduced-motion:reduce){.bar i,.medal,.toast{transition:none}}
+</style>
+</head>
+<body>
+
+<canvas id="fx" aria-hidden="true"></canvas>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<div class="notice"><div class="wrap"><b>Protótipo acadêmico.</b><span>Criado para o trabalho Global Solution 2TMKR (FIAP). Não é o site oficial da naPorta; nada do que você digitar é enviado ou guardado.</span></div></div>
+
+<header class="hud"><div class="wrap">
+  <span class="logo">CEP Digital</span>
+  <div class="xp">
+    <div class="xp-top"><span>Nível: <b id="lvl">Visitante</b></span><span><b id="xpn">0</b> / <span id="xpmax">270</span> XP</span></div>
+    <div class="bar" role="progressbar" aria-label="Progresso das missões" aria-valuemin="0" aria-valuemax="270" aria-valuenow="0" id="bar"><i id="barfill"></i></div>
+  </div>
+  <div class="medals" id="medals" aria-label="Medalhas">
+    <span class="medal" data-m="game" title="Medalha Rota"><svg viewBox="0 0 24 24"><path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg></span>
+    <span class="medal" data-m="quiz" title="Medalha Quiz"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .8-1 1.5M12 17h.01"/></svg></span>
+    <span class="medal" data-m="calc" title="Medalha Conta"><svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 7h8M8 12h2M12 12h2M8 16h2M12 16h2"/></svg></span>
+    <span class="medal" data-m="form" title="Medalha CEP"><svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8M5 10v10h14V10M10 20v-5h4v5"/></svg></span>
+  </div>
+</div></header>
+
+<main>
+<section class="hero"><div class="wrap">
+  <div>
+    <p class="eyebrow">Cadastro gratuito do CEP Digital</p>
+    <h1>Sua casa merece um endereço. Complete as missões e crie seu CEP Digital.</h1>
+    <p class="lead">Jogue, aprenda e cadastre sua casa pelo celular em poucos minutos. Cada missão rende pontos e medalhas.</p>
+    <div class="ctas">
+      <a class="btn primary" href="#m1">Começar a missão</a>
+      <a class="btn ghost" href="#m4">Ir direto ao cadastro</a>
+    </div>
+  </div>
+  <aside class="card pass" aria-label="Passaporte de missões">
+    <h3>Passaporte do morador</h3>
+    <p class="sub2">Complete as 4 missões para chegar ao nível máximo.</p>
+    <ul class="missions" id="mlist">
+      <li data-m="game"><span class="ck"><svg viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg></span><a href="#m1">Missão 1 · Rota da entrega</a><span class="pts">+60 XP</span></li>
+      <li data-m="quiz"><span class="ck"><svg viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg></span><a href="#m2">Missão 2 · Quiz do endereço</a><span class="pts">+30 XP</span></li>
+      <li data-m="calc"><span class="ck"><svg viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg></span><a href="#m3">Missão 3 · Calculadora</a><span class="pts">+20 XP</span></li>
+      <li data-m="form"><span class="ck"><svg viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg></span><a href="#m4">Missão 4 · Criar meu CEP Digital</a><span class="pts">+160 XP</span></li>
+    </ul>
+  </aside>
+</div></section>
+
+<section class="problem"><div class="wrap">
+  <div class="big">36,2 milhões</div>
+  <div>
+    <p>de brasileiros em comunidades e regiões periféricas não recebem as compras online onde moram. Já desistiu de uma compra porque a loja não entrega no seu endereço?</p>
+    <small>Fonte: pesquisa do Instituto Locomotiva e do Data Favela, citada no site da naPorta.</small>
+  </div>
+</div></section>
+
+<section class="block" id="m1"><div class="wrap">
+  <div class="mhead"><span class="tag">Missão 1</span><h2>Rota da entrega: ache a casa onde o GPS desiste</h2></div>
+  <p class="sub">O GPS marcou o lugar errado. Use a dica da comunidade para achar a casa certa. São 3 rodadas, e cada acerto vale 20 XP.</p>
+  <div class="game">
+    <div class="map" id="map" role="group" aria-label="Mapa do bairro"></div>
+    <div class="clue">
+      <span class="k" id="round">Rodada 1 de 3</span>
+      <p class="q" id="clue">—</p>
+      <div class="stars" id="stars"></div>
+      <div class="fb" id="gfb" aria-live="polite">Toque na casa que combina com a dica.</div>
+      <button class="btn ghost small" type="button" id="greset" hidden>Jogar de novo</button>
+    </div>
+  </div>
+</div></section>
+
+<section class="block alt" id="m2"><div class="wrap">
+  <div class="mhead"><span class="tag">Missão 2</span><h2>Quiz do endereço</h2></div>
+  <p class="sub">Três perguntas rápidas. Cada acerto vale 10 XP.</p>
+  <div class="card quiz" id="quiz"></div>
+</div></section>
+
+<section class="block" id="m3"><div class="wrap">
+  <div class="mhead"><span class="tag">Missão 3</span><h2>Calculadora: quanto uma compra perdida custa</h2></div>
+  <p class="sub">Mexa nos controles com a sua realidade. O cálculo é uma simulação feita só com os números que você informar.</p>
+  <div class="calc">
+    <div>
+      <label for="qtd">Compras que você desistiu por mês: <b id="qtdv">2</b></label>
+      <input type="range" id="qtd" min="1" max="10" value="2">
+      <label for="val">Valor médio de cada compra: <b id="valv">R$ 120</b></label>
+      <input type="range" id="val" min="30" max="500" step="10" value="120">
+    </div>
+    <div class="result" aria-live="polite">
+      <div>Em um ano, ficam de fora</div>
+      <div class="n" id="tot">R$ 2.880</div>
+      <small>em compras que não chegaram a você. Com um endereço válido, elas passam a ser possíveis.</small>
+    </div>
+  </div>
+</div></section>
+
+<section class="block alt" id="m4"><div class="wrap" style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:32px;align-items:start" id="m4grid">
+  <div>
+    <div class="mhead"><span class="tag">Missão 4</span><h2>Crie seu CEP Digital grátis</h2></div>
+    <p class="sub">São 3 etapas curtas. Cada etapa concluída rende 20 XP, e o cadastro completo rende 100 XP extras.</p>
+    <ol class="how" style="grid-template-columns:1fr">
+      <li><h3>Informe seus dados</h3><p style="color:var(--muted)">Nome e celular com WhatsApp.</p></li>
+      <li><h3>Diga onde fica sua casa</h3><p style="color:var(--muted)">Comunidade, cidade e um ponto de referência.</p></li>
+      <li><h3>Receba seu CEP Digital</h3><p style="color:var(--muted)">Use nas compras e receba em casa.</p></li>
+    </ol>
+  </div>
+  <div class="card formwrap" id="cadastro">
+    <form id="form" novalidate>
+      <div class="steps-bar" aria-hidden="true"><i class="on"></i><i></i><i></i></div>
+      <p class="step-label" id="step-label" aria-live="polite">Etapa 1 de 3 · Seus dados</p>
+      <fieldset class="step" data-step="1" style="border:0;padding:0;margin:0">
+        <label for="nome">Nome completo</label>
+        <input type="text" id="nome" autocomplete="name" placeholder="Como você se chama?">
+        <div class="err" data-for="nome"></div>
+        <label for="cel">Celular com WhatsApp</label>
+        <input type="tel" id="cel" inputmode="numeric" autocomplete="tel" placeholder="(27) 99999-9999">
+        <div class="err" data-for="cel"></div>
+      </fieldset>
+      <fieldset class="step" data-step="2" hidden style="border:0;padding:0;margin:0">
+        <label for="comunidade">Nome da comunidade ou bairro</label>
+        <input type="text" id="comunidade" placeholder="Ex.: Morro do Alemão">
+        <div class="err" data-for="comunidade"></div>
+        <label for="cidade">Cidade e estado</label>
+        <input type="text" id="cidade" placeholder="Ex.: Vitória, ES">
+        <div class="err" data-for="cidade"></div>
+        <label for="ref">Onde fica sua casa? <span class="hint">(ponto de referência)</span></label>
+        <textarea id="ref" placeholder="Ex.: Ao lado da padaria do Seu João, casa azul"></textarea>
+        <div class="err" data-for="ref"></div>
+      </fieldset>
+      <fieldset class="step" data-step="3" hidden style="border:0;padding:0;margin:0">
+        <label for="inst">Instruções para o entregador <span class="hint">(opcional)</span></label>
+        <textarea id="inst" placeholder="Ex.: Chamar pelo WhatsApp ao chegar na entrada da viela"></textarea>
+        <label class="check" for="lgpd"><input type="checkbox" id="lgpd"><span>Concordo com o uso dos meus dados para criar meu endereço, conforme a política de privacidade e a LGPD.</span></label>
+        <div class="err" data-for="lgpd"></div>
+      </fieldset>
+      <div class="row">
+        <button class="btn ghost" type="button" id="back" hidden>Voltar</button>
+        <button class="btn primary" type="submit" id="next">Continuar</button>
+      </div>
+    </form>
+    <div id="done" hidden>
+      <div class="passport">
+        <span class="tag">Simulação concluída</span>
+        <div class="code" id="code">CD-0000-SIM</div>
+        <p style="color:var(--muted);font-size:.92rem">Este é o seu passaporte de exemplo. No site real, o morador recebe o CEP Digital por WhatsApp. Esta tela é a página de agradecimento, que registra a <b>conversão principal</b> do Google Ads.</p>
+        <dl><dt>Morador</dt><dd id="pn">—</dd><dt>Comunidade</dt><dd id="pc">—</dd><dt>Cidade</dt><dd id="pci">—</dd></dl>
+        <p class="level-line" id="finalLvl"></p>
+      </div>
+      <div class="row"><button class="btn ghost" type="button" id="again">Refazer a simulação</button></div>
+    </div>
+  </div>
+</div></section>
+
+<section class="block"><div class="wrap">
+  <h2 style="margin-bottom:8px">Por que criar o seu CEP Digital</h2>
+  <p class="sub">Coordenadas geográficas e informações construídas com a comunidade transformam o lugar onde você mora em um endereço que o comércio eletrônico reconhece.</p>
+  <div class="grid g4">
+    <div class="card benefit"><div class="ico"><svg viewBox="0 0 24 24"><path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg></div><h3>Endereço válido para e-commerce</h3><p>Chega de pedido cancelado por “CEP inexistente”.</p></div>
+    <div class="card benefit"><div class="ico"><svg viewBox="0 0 24 24"><path d="M20 12v8H4v-8M2 7h20v5H2zM12 22V7M12 7H7.5a2.5 2.5 0 1 1 0-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 1 0 0-5C13 2 12 7 12 7z"/></svg></div><h3>Cadastro 100% gratuito</h3><p>Você não paga nada para ter o seu endereço digital.</p></div>
+    <div class="card benefit"><div class="ico"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2M10 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM21 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg></div><h3>Entrega feita por quem é da comunidade</h3><p>Parceiros locais que conhecem as ruas e vielas da sua região.</p></div>
+    <div class="card benefit"><div class="ico"><svg viewBox="0 0 24 24"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg></div><h3>Feito pelo celular, com ajuda de IA</h3><p>Poucos campos por tela e um assistente para tirar dúvidas.</p></div>
+  </div>
+</div></section>
+
+<section class="block alt"><div class="wrap">
+  <h2 style="margin-bottom:8px">Quem confia na naPorta</h2>
+  <p class="sub">Espaço reservado para a prova social da página final.</p>
+  <div class="grid g3">
+    <div class="ph">Depoimentos reais de moradores (a coletar com autorização).</div>
+    <div class="ph">Logos de parceiros e reconhecimentos (selos oficiais da empresa).</div>
+    <div class="ph">Matérias na imprensa e selo de privacidade LGPD.</div>
+  </div>
+</div></section>
+
+<section class="block"><div class="wrap">
+  <h2 style="margin-bottom:8px">Perguntas frequentes</h2>
+  <p class="sub">O que as pessoas mais perguntam antes de se cadastrar.</p>
+  <div style="max-width:760px">
+    <details><summary>É gratuito?</summary><p>Sim. Criar o seu CEP Digital não tem custo para o morador.</p></details>
+    <details><summary>Preciso de documento?</summary><p>No cadastro pedimos nome, celular e a descrição de onde você mora.</p></details>
+    <details><summary>Funciona em qualquer loja?</summary><p>O CEP Digital viabiliza entregas de lojas e marketplaces parceiros da naPorta. Quanto mais parceiros, mais lugares você poderá usar.</p></details>
+    <details><summary>Como meus dados são protegidos?</summary><p>Usamos seus dados só para criar e validar o endereço, conforme a LGPD.</p></details>
+    <details><summary>E se minha rua não aparece no mapa?</summary><p>É para isso que o CEP Digital existe: combina coordenadas e as informações da comunidade para criar o endereço, mesmo onde o GPS falha.</p></details>
+  </div>
+</div></section>
+</main>
+
+<footer><div class="wrap">
+  <span>Protótipo acadêmico · Global Solution 2TMKR · FIAP</span>
+  <span><a href="https://naporta.digital/cep-digital" target="_blank" rel="noopener">Site oficial da naPorta</a></span>
+</div></footer>
+
+<div class="card bot" id="bot" hidden role="dialog" aria-label="Assistente de IA (simulação)">
+  <div class="msg">Oi! Sou o assistente de IA da página (simulação). Sobre o que você quer saber?</div>
+  <div id="bot-log"></div>
+  <div class="qr" id="bot-qr">
+    <button type="button" data-q="gratis">É gratuito?</button>
+    <button type="button" data-q="tempo">Quanto tempo leva?</button>
+    <button type="button" data-q="rua">Minha rua não tem CEP</button>
+    <button type="button" data-q="cadastro">Quero me cadastrar</button>
+  </div>
+</div>
+<button class="btn primary bot-fab" type="button" id="fab" aria-expanded="false" aria-controls="bot">Assistente de IA</button>
+
+<script>
+(function(){
+  var $=function(id){return document.getElementById(id)};
+  var MAX=270, LEVELS=[[0,'Visitante'],[60,'Explorador'],[140,'Mapeador'],[220,'Guia do bairro'],[270,'Mestre do CEP']];
+  var xp=0, done={}, gotStep={};
+  var toastT;
+  function toast(msg){var t=$('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(function(){t.classList.remove('show')},2200)}
+  function level(){var n=LEVELS[0][1]; LEVELS.forEach(function(l){if(xp>=l[0]) n=l[1]}); return n}
+  function render(){
+    $('xpn').textContent=xp; $('lvl').textContent=level(); $('xpmax').textContent=MAX;
+    $('barfill').style.width=Math.min(100,xp/MAX*100)+'%';
+    $('bar').setAttribute('aria-valuenow',xp);
+  }
+  function add(n,msg){
+    var before=level(); xp=Math.min(MAX,xp+n); render();
+    toast('+'+n+' XP'+(msg?' · '+msg:''));
+    if(level()!==before){ setTimeout(function(){toast('Novo nível: '+level()); burst(60)},900) }
+  }
+  function complete(m,msg){
+    if(done[m]) return; done[m]=true;
+    [].forEach.call(document.querySelectorAll('[data-m="'+m+'"]'),function(el){el.classList.add(el.classList.contains('medal')?'on':'done')});
+    burst(40);
+  }
+
+  /* confete */
+  var cv=$('fx'), cx=cv.getContext('2d'), P=[], raf=0;
+  function size(){cv.width=innerWidth*devicePixelRatio; cv.height=innerHeight*devicePixelRatio}
+  size(); addEventListener('resize',size);
+  function burst(n){
+    if(matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    var cols=['#f2b01e','#0b5c6b','#4fb3c4','#d9648e','#3d9a5b'];
+    for(var i=0;i<n;i++) P.push({x:innerWidth/2*devicePixelRatio,y:innerHeight*0.3*devicePixelRatio,vx:(Math.random()-.5)*14*devicePixelRatio,vy:(-Math.random()*12-4)*devicePixelRatio,s:(4+Math.random()*5)*devicePixelRatio,c:cols[i%5],l:90});
+    if(!raf) raf=requestAnimationFrame(tick);
+  }
+  function tick(){
+    cx.clearRect(0,0,cv.width,cv.height);
+    P=P.filter(function(p){p.l--; p.x+=p.vx; p.y+=p.vy; p.vy+=.35*devicePixelRatio; cx.fillStyle=p.c; cx.globalAlpha=Math.max(0,p.l/90); cx.fillRect(p.x,p.y,p.s,p.s*.6); return p.l>0});
+    cx.globalAlpha=1;
+    raf=P.length?requestAnimationFrame(tick):0;
+  }
+
+  /* missão 1: jogo */
+  var COLORS=['azul','verde','amarela','rosa'], MARKS=['padaria','escola','igreja','quadra'];
+  var round=0, stars=0, locked=false, target=null, gpsIdx=0, cells=[];
+  function rnd(n){return Math.floor(Math.random()*n)}
+  function buildRound(){
+    var ok=false, list, t;
+    while(!ok){
+      list=[]; for(var i=0;i<16;i++) list.push({c:COLORS[rnd(4)],m:MARKS[rnd(4)]});
+      t=rnd(16);
+      ok=list.filter(function(x){return x.c===list[t].c&&x.m===list[t].m}).length===1;
+    }
+    cells=list; target=t;
+    do{gpsIdx=rnd(16)}while(gpsIdx===t);
+    var map=$('map'); map.innerHTML='';
+    list.forEach(function(x,i){
+      var b=document.createElement('button'); b.type='button'; b.className='cell'+(i===gpsIdx?' gps':'');
+      b.setAttribute('aria-label','Casa '+x.c+' perto da '+x.m+(i===gpsIdx?' (marcada pelo GPS)':''));
+      b.innerHTML='<span class="house c-'+x.c+'"></span><span>'+x.c+'<br>'+x.m+'</span>';
+      b.addEventListener('click',function(){pick(i,b)});
+      map.appendChild(b);
+    });
+    $('clue').textContent='Casa '+list[t].c+' perto da '+list[t].m;
+    $('round').textContent='Rodada '+(round+1)+' de 3';
+    $('gfb').className='fb'; $('gfb').textContent='O GPS marcou outra casa. Toque na casa certa.';
+    locked=false;
+  }
+  function drawStars(){
+    var h=''; for(var i=0;i<3;i++) h+='<svg viewBox="0 0 24 24" class="'+(i<stars?'on':'')+'"><path d="M12 2l3 6.5 7 .9-5.2 4.8 1.4 7L12 17.8 5.8 21.2l1.4-7L2 9.4l7-.9z"/></svg>';
+    $('stars').innerHTML=h;
+  }
+  function pick(i,b){
+    if(locked) return; locked=true;
+    var fb=$('gfb');
+    if(i===target){
+      b.classList.add('right'); stars++; drawStars(); fb.className='fb ok'; fb.textContent='Achou! A comunidade sabe onde fica.'; add(20,'rota certa');
+    } else {
+      b.classList.add('wrong'); $('map').children[target].classList.add('right'); fb.className='fb no'; fb.textContent='Errou. A casa certa está marcada em verde.';
+    }
+    setTimeout(function(){
+      round++;
+      if(round<3){buildRound()}
+      else{
+        fb.className='fb ok'; fb.textContent='Fim do jogo: '+stars+' de 3 casas encontradas.';
+        $('round').textContent='Missão concluída'; $('clue').textContent=stars===3?'Você achou tudo!':'Boa tentativa!';
+        $('greset').hidden=false; complete('game');
+        if(stars===3) toast('Rota perfeita');
+      }
+    },1100);
+  }
+  $('greset').addEventListener('click',function(){round=0;stars=0;drawStars();$('greset').hidden=true;buildRound()});
+  drawStars(); buildRound();
+
+  /* missão 2: quiz */
+  var Q=[
+    {q:'Segundo a pesquisa citada no site da naPorta, quantos brasileiros em comunidades não recebem compras online onde moram?',o:['3,6 milhões','36,2 milhões','362 mil'],a:1,e:'São 36,2 milhões de pessoas (Instituto Locomotiva e Data Favela).'},
+    {q:'O que o CEP Digital usa para criar um endereço onde o GPS falha?',o:['Só o nome da rua','Coordenadas geográficas e informações da comunidade','Um código dos Correios'],a:1,e:'Ele combina coordenadas geográficas com a construção feita com a própria comunidade.'},
+    {q:'O que mais ajuda o entregador a achar a sua casa?',o:['Um ponto de referência claro','Nenhuma informação','Só o número da casa'],a:0,e:'Pontos de referência, como a padaria ao lado, ajudam muito quando não há placas.'}
+  ];
+  var qi=0, qs=0;
+  function showQ(){
+    var q=Q[qi], box=$('quiz'); box.innerHTML='';
+    var n=document.createElement('div'); n.className='qn'; n.textContent='Pergunta '+(qi+1)+' de '+Q.length; box.appendChild(n);
+    var h=document.createElement('h3'); h.textContent=q.q; box.appendChild(h);
+    var o=document.createElement('div'); o.className='opts'; box.appendChild(o);
+    var ex=document.createElement('p'); ex.className='expl'; ex.setAttribute('aria-live','polite'); box.appendChild(ex);
+    q.o.forEach(function(t,i){
+      var b=document.createElement('button'); b.type='button'; b.className='opt'; b.textContent=t;
+      b.addEventListener('click',function(){
+        [].forEach.call(o.children,function(x){x.disabled=true});
+        if(i===q.a){b.classList.add('right'); qs++; add(10,'resposta certa')} else {b.classList.add('wrong'); o.children[q.a].classList.add('right')}
+        ex.textContent=q.e;
+        var nx=document.createElement('button'); nx.type='button'; nx.className='btn primary small'; nx.style.marginTop='14px';
+        nx.textContent=qi<Q.length-1?'Próxima pergunta':'Ver resultado';
+        nx.addEventListener('click',function(){qi++; if(qi<Q.length) showQ(); else endQ()});
+        box.appendChild(nx);
+      });
+      o.appendChild(b);
+    });
+  }
+  function endQ(){
+    var box=$('quiz'); box.innerHTML='<h3>Você acertou '+qs+' de '+Q.length+'</h3><p class="expl">'+(qs===3?'Nota máxima. Você já entende bem o problema do endereço.':'Revise as respostas e jogue de novo, se quiser.')+'</p>';
+    var r=document.createElement('button'); r.type='button'; r.className='btn ghost small'; r.style.marginTop='14px'; r.textContent='Refazer o quiz';
+    r.addEventListener('click',function(){qi=0;qs=0;showQ()}); box.appendChild(r);
+    complete('quiz');
+  }
+  showQ();
+
+  /* missão 3: calculadora */
+  var calcTouched=false;
+  function calc(){
+    var q=+$('qtd').value, v=+$('val').value;
+    $('qtdv').textContent=q; $('valv').textContent='R$ '+v;
+    $('tot').textContent='R$ '+(q*v*12).toLocaleString('pt-BR');
+  }
+  ['qtd','val'].forEach(function(id){$(id).addEventListener('input',function(){calc(); if(!calcTouched){calcTouched=true; add(20,'conta feita'); complete('calc')}})});
+  calc();
+
+  /* missão 4: formulário */
+  var form=$('form'), steps=[].slice.call(form.querySelectorAll('.step')), bars=[].slice.call(form.querySelectorAll('.steps-bar i'));
+  var next=$('next'), back=$('back'), lab=$('step-label'), titles=['Seus dados','Onde você mora','Confirmação'], cur=0;
+  function show(n){
+    cur=n; steps.forEach(function(s,i){s.hidden=(i!==n)}); bars.forEach(function(b,i){b.classList.toggle('on',i<=n)});
+    lab.textContent='Etapa '+(n+1)+' de 3 · '+titles[n]; back.hidden=(n===0); next.textContent=(n===2)?'Concluir cadastro':'Continuar';
+  }
+  function setErr(id,m){var e=form.querySelector('.err[data-for="'+id+'"]'); if(e) e.textContent=m||''}
+  function val(n){
+    var ok=true;
+    if(n===0){
+      var nome=$('nome').value.trim(), cel=$('cel').value.replace(/\D/g,'');
+      if(nome.length<3){setErr('nome','Digite seu nome completo.');ok=false}else setErr('nome');
+      if(cel.length<10||cel.length>11){setErr('cel','Digite o celular com DDD, por exemplo (27) 99999-9999.');ok=false}else setErr('cel');
+    }
+    if(n===1){['comunidade','cidade','ref'].forEach(function(id){var bad=$(id).value.trim().length<3; setErr(id,bad?'Preencha este campo.':''); if(bad) ok=false})}
+    if(n===2){var bad=!$('lgpd').checked; setErr('lgpd',bad?'Marque para concluir o cadastro.':''); if(bad) ok=false}
+    return ok;
+  }
+  form.addEventListener('submit',function(e){
+    e.preventDefault(); if(!val(cur)) return;
+    if(!gotStep[cur]){gotStep[cur]=true; add(20,'etapa '+(cur+1)+' concluída')}
+    if(cur<2){show(cur+1);return}
+    add(100,'cadastro completo'); complete('form'); burst(120);
+    $('code').textContent='CD-'+(1000+rnd(9000))+'-SIM';
+    $('pn').textContent=$('nome').value.trim(); $('pc').textContent=$('comunidade').value.trim(); $('pci').textContent=$('cidade').value.trim();
+    $('finalLvl').textContent='Seu nível: '+level()+' · '+xp+' XP';
+    form.hidden=true; $('done').hidden=false;
+  });
+  back.addEventListener('click',function(){show(cur-1)});
+  $('again').addEventListener('click',function(){
+    form.reset(); [].forEach.call(form.querySelectorAll('.err'),function(x){x.textContent=''});
+    $('done').hidden=true; form.hidden=false; show(0);
+  });
+  show(0); render();
+
+  /* assistente */
+  var bot=$('bot'), fab=$('fab'), log=$('bot-log');
+  var A={gratis:['É gratuito?','Sim. Criar o CEP Digital não tem custo para o morador.'],tempo:['Quanto tempo leva?','São 3 etapas curtas, em poucos minutos, pelo celular.'],rua:['Minha rua não tem CEP','É para isso que o CEP Digital existe: usamos coordenadas e as informações da comunidade para criar o seu endereço.'],cadastro:['Quero me cadastrar','Ótimo! Vou levar você ao cadastro.']};
+  function tg(o){bot.hidden=!o; fab.setAttribute('aria-expanded',String(o))}
+  fab.addEventListener('click',function(){tg(bot.hidden)});
+  $('bot-qr').addEventListener('click',function(e){
+    var k=e.target.getAttribute&&e.target.getAttribute('data-q'); if(!k) return;
+    var me=document.createElement('div'); me.className='msg me'; me.textContent=A[k][0];
+    var bt=document.createElement('div'); bt.className='msg'; bt.textContent=A[k][1];
+    log.appendChild(me); log.appendChild(bt); bot.scrollTop=bot.scrollHeight;
+    if(k==='cadastro'){tg(false); $('cadastro').scrollIntoView({behavior:'smooth',block:'center'})}
+  });
+  if(matchMedia('(max-width:820px)').matches){$('m4grid').style.gridTemplateColumns='1fr'}
+  addEventListener('resize',function(){$('m4grid').style.gridTemplateColumns=matchMedia('(max-width:820px)').matches?'1fr':'minmax(0,1fr) minmax(0,1fr)'});
+})();
+</script>
+</body>
+</html>
